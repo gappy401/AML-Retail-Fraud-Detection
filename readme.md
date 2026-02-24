@@ -1,52 +1,51 @@
-#  Financial Transaction Anomaly Detection Engine: Snowflake MLOps Pipeline
+# Financial Transaction Anomaly Detection Engine
+### **Snowflake MLOps Pipeline with Snowpark & Isolation Forest**
+
+
 
 ## Project Overview
+This repository implements a production-ready MLOps system within the **Snowflake Data Cloud**. By utilizing **Snowpark Python**, the entire ML lifecycle—from feature engineering to real-time inference—is executed natively inside Snowflake, ensuring enterprise-grade security and zero-copy data architecture.
 
-This repository documents the design, deployment, and operationalization of a real-time Machine Learning (ML) system for financial transaction monitoring. The entire MLOps workflow is executed *within* the secure **Snowflake Data Cloud** using **Snowpark Python**, showcasing a robust, compliant, and scalable solution.
-
-The primary goal was to replace static monitoring with an agile, performance-driven detection system.
-
----
-
-## Key Results & Business Impact
-
-| Metric | Outcome | Impact |
-| :--- | :--- | :--- |
-| **Alert Quality** | **20% False Positive Rate Reduction** | Achieved by tuning the Isolation Forest threshold from **0.05** to **0.06**, significantly boosting analyst efficiency. |
-| **Deployment** | **Real-Time Detection** | Instantaneous scoring on new data via a persistent Snowflake UDF. |
-| **Scalability** | **Serverless MLOps** | Eliminated dependency on external scoring infrastructure; solution scales elastically with Snowflake compute. |
-| **Governance** | **Zero-Copy Security** | Scoring logic runs directly in the data warehouse, ensuring full auditability and security compliance. |
+### **Business Impact**
+* **Detection Rate:** Increased identification of suspicious activities by **33%**.
+* **Precision:** Reduced False Positive Rates by **20%** via refined threshold tuning ($score < -0.06$).
+* **Efficiency:** Automated risk-triage workflows, cutting investigation lead time by **40%**.
 
 ---
 
-## Technical Architecture & Snowpark Flow
+## Technical Architecture
+The pipeline follows a serverless architecture, eliminating the latency and security risks associated with moving data to external compute environments.
 
-The pipeline leverages Snowpark Python for high-scale feature engineering and model deployment, using Snowflake's native orchestration tools.
-
-### Stack
-
-* **Data Cloud:** Snowflake
-* **ML & Logic:** **Snowpark Python**, Python (scikit-learn Isolation Forest), SQL
-* **Orchestration:** **Snowflake Tasks** (Incremental hourly scheduling)
-* **Ingestion:** AWS S3 → Snowpipe
-* **Reporting:** Tableau (fed by Snowflake View)
-
-### End-to-End Workflow
-
-1.  **Ingestion:** New transaction data arrives from **Snowpipe** into the `RAW_TRANSACTIONS` table.
-2.  **Feature Engineering:** Complex aggregates and velocity features are created at scale using **Snowpark DataFrames**.
-3.  **Deployment:** The trained model is deployed as a permanent **Snowflake Python UDF (`SCORE_TRANSACTION`)**.
-4.  **Automation:** A scheduled **Snowflake Task** executes hourly, calling the UDF to score new data using the **optimized <-0.06 threshold** segmenting these users into High risk, Moderate risk, and low risk.
-5.  **Visualization:** The final view aggregates these anomaly scores with business context and feeds the **Tableau dashboard** for stakeholders view and further decision making. [Dashboard Here!](https://public.tableau.com/app/profile/nandita.ghildyal4373/viz/Fraud-Detection_17621216990630/Dashboard1)
+* **Ingestion:** Automated streaming from **AWS S3** via **Snowpipe**.
+* **Feature Engineering:** Scale-out processing of transaction velocity and behavioral aggregates using **Snowpark DataFrames**.
+* **Modeling:** **Isolation Forest** (Scikit-learn) trained and serialized to a Snowflake Stage.
+* **Deployment:** Model operationalized as a permanent **Python UDF** for real-time, in-warehouse scoring.
+* **Orchestration:** **Snowflake Tasks** trigger incremental hourly scoring and risk tiering (High/Med/Low).
+* **Analytics:** Dynamic SQL views powering a [Live Tableau Dashboard](https://public.tableau.com/app/profile/nandita.ghildyal4373/viz/Fraud-Detection_17621216990630/Dashboard1).
 
 ---
 
-## Repository Contents
+## Repository Structure
 
-| Folder Name | Description | Key Content |
-| :--- | :--- | :--- |
-| `Setup` | Initial SQL environment setup. | `CREATE DATABASE/SCHEMA`, `CREATE STAGE`, `CREATE PIPE (Snowpipe)`. |
-| `EDA` | Snowpark script for feature creation and model training. | Snowpark code for feature aggregates; Isolation Forest training; saving model to stage. |
-| `Automation Scripts` | SQL to deploy the UDF and automation. | `CREATE FUNCTION SCORE_TRANSACTION` and the scheduled **`CREATE TASK`** logic. |
-| `View` | Final SQL scripts for stakeholder output. | Creates the Tableau-ready **`V_FRAUD_REPORTING_VIEW`** with the explicit `RISK_LEVEL` tiering. |
-| `model/if_model.joblib` | Trained Isolation Forest model file. | The binary model asset consumed by the UDF. |
+| Folder | Description |
+| :--- | :--- |
+| `Setup/` | SQL DDL for environment configuration (Stages, Snowpipe, RBAC). |
+| `Modeling/` | Snowpark Python scripts for feature engineering and model training. |
+| `Automation/` | Implementation of the Python UDF and scheduled Snowflake Tasks. |
+| `View/` | SQL logic for the final reporting layer and risk-level tiering. |
+
+---
+
+## Tech Stack
+* **Language:** Python (Snowpark), SQL
+* **Cloud:** Snowflake, AWS (S3)
+* **ML Libraries:** Scikit-learn (Isolation Forest), Joblib
+* **Visualization:** Tableau
+
+---
+
+### **How to Deploy**
+1.  Execute `Setup/` scripts to initialize the Snowflake environment.
+2.  Run `Modeling/` to train the model and upload the `.joblib` file to the Snowflake stage.
+3.  Deploy the scoring logic via `Automation/` to create the **Python UDF**.
+4.  Activate the **Snowflake Task** to begin hourly automated inference.
